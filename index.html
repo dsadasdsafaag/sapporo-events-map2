@@ -5,49 +5,70 @@
   <title>札幌イベントMAP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- ✅ Leafletの読み込み（SRIなし・正しい順序） -->
+  <!-- Leaflet（SRIなし） -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- ✅ ルーティング機能（Leafletの後に） -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css">
-  <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js"></script>
-
   <style>
     * { box-sizing: border-box; }
-    body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto; }
-    header{ padding:10px 12px; border-bottom:1px solid #eee; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-    h1 { margin:0; font-size:16px; }
-    /* 地図が確実に表示されるよう高さを固定 */
-    #map { height: 80vh; border-top: 1px solid #f0f0f0; }
+    html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto; }
+    header {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+      background: rgba(255,255,255,0.9);
+      padding: 8px 12px;
+      display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+      border-bottom: 1px solid #ddd;
+    }
+    h1 { margin: 0; font-size: 16px; }
+    #map { height: 100vh; width: 100vw; }
+    select, input {
+      padding: 6px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
   </style>
 </head>
 <body>
   <header>
     <h1>札幌イベントMAP</h1>
-    <span style="font-size:12px;color:#666;">（まずは地図が出るか確認）</span>
+    <select id="when">
+      <option value="all">いつでも</option>
+      <option value="today">今日</option>
+      <option value="week">今週</option>
+      <option value="month">今月</option>
+    </select>
+    <select id="cat">
+      <option value="all">ジャンル（すべて）</option>
+      <option value="グルメ">グルメ</option>
+      <option value="音楽">音楽</option>
+      <option value="アート">アート</option>
+      <option value="スポーツ">スポーツ</option>
+    </select>
+    <input id="kw" type="search" placeholder="キーワード（例：大通、公園、花）" />
   </header>
 
   <div id="map"></div>
 
   <script>
-    // Leafletが読み込まれているか確認
-    if (!window.L) {
-      document.getElementById('map').innerHTML =
-        '❌ Leafletが読み込めていません。ネットワークまたはブラウザ拡張を確認してください。';
-    } else {
-      // ✅ 地図を初期化（札幌中心）
-      const map = L.map('map').setView([43.0618, 141.3545], 12);
+    // 地図を初期化（札幌中心）
+    const map = L.map('map').setView([43.0618, 141.3545], 12);
 
-      // ✅ OSMタイル（HTTPS対応）
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap contributors'
-      }).addTo(map);
+    // ✅ 地理院タイル（淡色地図）を使用
+    L.tileLayer(
+      'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',
+      {
+        maxZoom: 18,
+        attribution: '地理院タイル（淡色地図） | © 国土地理院 / © OpenStreetMap contributors'
+      }
+    ).addTo(map);
 
-      // ✅ テスト用マーカー（大通公園）
-      L.marker([43.0610, 141.356]).addTo(map).bindPopup('テスト：大通公園付近');
-    }
+    // テストマーカー
+    L.marker([43.0610, 141.356])
+      .addTo(map)
+      .bindPopup('テスト：大通公園付近');
   </script>
 </body>
 </html>
