@@ -12,44 +12,39 @@
   <style>
     * { box-sizing: border-box; }
     html, body { height: 100%; margin: 0; }
-    /* 画面全体を縦に分割：ヘッダー + 地図（地図は自動で残り全部） */
     body { display: flex; flex-direction: column; font-family: system-ui, -apple-system, "Segoe UI", Roboto; }
     header {
-      min-height: 50px; /* 実高さが変わってもOK */
+      min-height: 50px;
       padding: 8px 12px;
       border-bottom: 1px solid #eee;
       display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
     }
     h1 { margin: 0; font-size: 16px; }
-    /* 地図は残りの高さをすべて使う */
     #map { flex: 1; width: 100%; }
   </style>
 </head>
 <body>
   <header>
     <h1>札幌イベントMAP</h1>
-    <span style="font-size:12px;color:#666;">（地理院：淡色／全画面）</span>
+    <span style="font-size:12px;color:#666;">（OpenStreetMap標準版・全画面）</span>
   </header>
 
   <div id="map"></div>
 
   <script>
     if (!window.L) {
-      document.getElementById('map').innerHTML = 'Leafletが読み込めていません。拡張機能やネットワークを確認してください。';
+      document.getElementById('map').innerHTML = 'Leafletが読み込めていません。';
     } else {
       const map = L.map('map').setView([43.0618, 141.3545], 12);
 
-      // ★ここが“淡色地図”唯一のタイル。OSMのtileLayerは入れないこと！
-      L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png?v=1', {
-        maxZoom: 18,
-        attribution: '地理院タイル（淡色地図） | © 国土地理院 / © OpenStreetMap contributors'
+      // ✅ OpenStreetMap標準タイル（最初に地図が出た時の形式）
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
       }).addTo(map);
 
       // テストマーカー
       L.marker([43.0610, 141.356]).addTo(map).bindPopup('テスト：大通公園付近');
-
-      // デバッグ：実際にどのタイルを使っているか確認したいとき用
-      console.log('tile in use:', 'GSI pale');
     }
   </script>
 </body>
