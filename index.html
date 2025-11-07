@@ -63,7 +63,7 @@
         attribution: '© OpenStreetMap contributors'
       }).addTo(map);
 
-      // ===== 現在地（任意タイミングで取得） =====
+      // ===== 現在地 =====
       let userLatLng = null;
       let userMarker = null;
       function getUserLocation() {
@@ -87,8 +87,7 @@
         );
       }
       document.getElementById('locateBtn').onclick = getUserLocation;
-
-      // 初回は自動で試す（不要ならコメントアウト）
+      // 初回自動（不要ならコメントアウト）
       getUserLocation();
 
       // ===== ルート表示（Leaflet Routing Machine + OSRMデモ） =====
@@ -98,7 +97,6 @@
           alert('先に［現在地を取得］してください。');
           return;
         }
-        // 既存ルートを消す
         if (routingControl) {
           map.removeControl(routingControl);
           routingControl = null;
@@ -109,12 +107,12 @@
             L.latLng(lat, lng)
           ],
           lineOptions: { addWaypoints: false },
-          show: false,           // 右側のデフォルト案内パネルを隠す
+          show: false,
           collapsible: true,
           router: L.Routing.osrmv1({
             serviceUrl: 'https://router.project-osrm.org/route/v1'
           }),
-          createMarker: () => null // 経路のデフォルトマーカーを出さない
+          createMarker: () => null
         }).addTo(map);
       }
       document.getElementById('clearRouteBtn').onclick = () => {
@@ -124,26 +122,28 @@
         }
       };
 
-      // ===== イベントの表示（色分け丸マーカー＋解説） =====
+      // ===== カテゴリ色（学び・その他を追加） =====
       const CATEGORY_COLORS = {
-        "グルメ": "#f25f5c",
-        "音楽":  "#3a86ff",
-        "アート":"#8338ec",
+        "グルメ":  "#f25f5c",
+        "音楽":   "#3a86ff",
+        "アート": "#8338ec",
         "スポーツ":"#43aa8b",
+        "学び":   "#ffbe0b",  // 例：セミナー/講座/ワークショップ
+        "その他":  "#6c757d",  // 汎用グレー
         "default":"#555"
       };
 
-      // 凡例
+      // ===== 凡例 =====
       const legendEl = document.getElementById('legend');
-      const legendCats = ["グルメ","音楽","アート","スポーツ"];
+      const legendCats = ["グルメ","音楽","アート","スポーツ","学び","その他"];
       legendEl.innerHTML =
         '<div style="font-weight:600;margin-bottom:4px;">ジャンル</div>' +
         legendCats.map(c => (
           `<div class="legend-item"><span class="dot" style="background:${CATEGORY_COLORS[c]}"></span>${c}</div>`
         )).join('');
 
-      // events.json を読み込む
-      fetch('events.json')
+      // ===== イベント表示 =====
+      fetch('events.json', { cache: 'no-store' })
         .then(r => r.json())
         .then(data => {
           data.forEach(ev => {
