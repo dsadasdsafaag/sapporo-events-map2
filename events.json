@@ -10,7 +10,7 @@
     "lng": 141.3545,
     "category": "グルメ",
     "url": "https://example.com/autumnfest",
-    "description": "北海道の秋の味覚が集まるフードイベント。週末は混雑するので早めの来場が安心。"
+    "description": "北海道の秋の味覚が集まるフードイベント。週末は混雑しがち。"
   },
   {
     "id": "evt-0002",
@@ -23,6 +23,6 @@
     "lng": 141.3512,
     "category": "音楽",
     "url": "https://example.com/concert",
-    "description": "屋外ステージでの生演奏。レジャーシートがあると快適。雨天時は公式で最新情報を確認。"
+    "description": "屋外ステージで生演奏。レジャーシート推奨。雨天時は公式を確認。"
   }
 ]
