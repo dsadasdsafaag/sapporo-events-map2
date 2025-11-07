@@ -9,6 +9,10 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+  <!-- ルート表示（Leaflet Routing Machine + OSRM） -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css">
+  <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js"></script>
+
   <style>
     * { box-sizing: border-box; }
     html, body { height: 100%; margin: 0; }
@@ -33,42 +37,103 @@
     .popup-title{ font-weight:700; margin:0 0 4px; font-size:14px; }
     .badge{ display:inline-block; padding:2px 6px; border-radius:999px; font-size:12px; background:#eef; }
     .popup-desc{ margin-top:6px; font-size:13px; line-height:1.5; }
+    .hint { font-size:12px; color:#666; margin-left:auto; }
+    button.small { padding:6px 10px; font-size:13px; }
   </style>
 </head>
 <body>
   <header>
     <h1>札幌イベントMAP</h1>
-    <span style="font-size:12px;color:#666;">（OSM標準／イベントピン表示）</span>
+    <button id="locateBtn" class="small">現在地を取得</button>
+    <button id="clearRouteBtn" class="small">ルートを消す</button>
+    <span class="hint">ピンを開いて［ここへ行く］で現在地→イベントの経路を表示</span>
   </header>
 
   <div id="map"></div>
-
-  <!-- カテゴリ凡例（必要なければ削除OK） -->
   <div class="legend" id="legend"></div>
 
   <script>
     if (!window.L) {
       document.getElementById('map').innerHTML = 'Leafletが読み込めていません。';
     } else {
-      // 札幌中心
+      // ===== 地図の初期化（札幌中心） =====
       const map = L.map('map').setView([43.0618, 141.3545], 12);
-
-      // OSM標準タイル
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '© OpenStreetMap contributors'
       }).addTo(map);
 
-      // カテゴリごとの色（増やしたい場合はここに追記）
-      const CATEGORY_COLORS = {
-        "グルメ": "#f25f5c",
-        "音楽": "#3a86ff",
-        "アート": "#8338ec",
-        "スポーツ": "#43aa8b",
-        "default": "#555"
+      // ===== 現在地（任意タイミングで取得） =====
+      let userLatLng = null;
+      let userMarker = null;
+      function getUserLocation() {
+        if (!navigator.geolocation) {
+          alert('この端末は位置情報に対応していません。');
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            userLatLng = [pos.coords.latitude, pos.coords.longitude];
+            if (userMarker) map.removeLayer(userMarker);
+            userMarker = L.marker(userLatLng, { title: '現在地' })
+              .bindPopup('📍 現在地')
+              .addTo(map);
+          },
+          err => {
+            alert('現在地を取得できませんでした。ブラウザの位置情報許可をご確認ください。');
+            console.warn(err);
+          },
+          { enableHighAccuracy: true, timeout: 10000 }
+        );
+      }
+      document.getElementById('locateBtn').onclick = getUserLocation;
+
+      // 初回は自動で試す（不要ならコメントアウト）
+      getUserLocation();
+
+      // ===== ルート表示（Leaflet Routing Machine + OSRMデモ） =====
+      let routingControl = null;
+      function routeTo(lat, lng) {
+        if (!userLatLng) {
+          alert('先に［現在地を取得］してください。');
+          return;
+        }
+        // 既存ルートを消す
+        if (routingControl) {
+          map.removeControl(routingControl);
+          routingControl = null;
+        }
+        routingControl = L.Routing.control({
+          waypoints: [
+            L.latLng(userLatLng[0], userLatLng[1]),
+            L.latLng(lat, lng)
+          ],
+          lineOptions: { addWaypoints: false },
+          show: false,           // 右側のデフォルト案内パネルを隠す
+          collapsible: true,
+          router: L.Routing.osrmv1({
+            serviceUrl: 'https://router.project-osrm.org/route/v1'
+          }),
+          createMarker: () => null // 経路のデフォルトマーカーを出さない
+        }).addTo(map);
+      }
+      document.getElementById('clearRouteBtn').onclick = () => {
+        if (routingControl) {
+          map.removeControl(routingControl);
+          routingControl = null;
+        }
       };
 
-      // 凡例を描画
+      // ===== イベントの表示（色分け丸マーカー＋解説） =====
+      const CATEGORY_COLORS = {
+        "グルメ": "#f25f5c",
+        "音楽":  "#3a86ff",
+        "アート":"#8338ec",
+        "スポーツ":"#43aa8b",
+        "default":"#555"
+      };
+
+      // 凡例
       const legendEl = document.getElementById('legend');
       const legendCats = ["グルメ","音楽","アート","スポーツ"];
       legendEl.innerHTML =
@@ -77,12 +142,12 @@
           `<div class="legend-item"><span class="dot" style="background:${CATEGORY_COLORS[c]}"></span>${c}</div>`
         )).join('');
 
-      // events.json を読み込んで丸マーカー表示
+      // events.json を読み込む
       fetch('events.json')
         .then(r => r.json())
         .then(data => {
           data.forEach(ev => {
-            if (!isFinite(ev.lat) || !isFinite(ev.lng)) return; // lat/lngが無い行はスキップ
+            if (!isFinite(ev.lat) || !isFinite(ev.lng)) return;
             const color = CATEGORY_COLORS[ev.category] || CATEGORY_COLORS.default;
 
             const marker = L.circleMarker([ev.lat, ev.lng], {
@@ -106,9 +171,16 @@
                 <div>📍 ${escapeHtml(ev.venue || ev.address || '')}</div>
                 ${ev.url ? `<div style="margin-top:6px;"><a href="${ev.url}" target="_blank" rel="noopener">公式情報を開く</a></div>` : ''}
                 ${ev.description ? `<div class="popup-desc">📝 ${escapeHtml(ev.description)}</div>` : ''}
+                <div style="margin-top:8px;">
+                  <button class="small" id="go-${ev.id}">ここへ行く（現在地→ルート）</button>
+                </div>
               </div>
             `;
             marker.bindPopup(popupHtml);
+            marker.on('popupopen', () => {
+              const btn = document.getElementById(`go-${ev.id}`);
+              if (btn) btn.onclick = () => routeTo(ev.lat, ev.lng);
+            });
           });
         })
         .catch(err => {
@@ -116,7 +188,7 @@
           alert('events.json を読み込めませんでした。ファイル配置を確認してください。');
         });
 
-      // ユーティリティ
+      // ===== ユーティリティ =====
       function escapeHtml(str) {
         return String(str || '').replace(/[&<>"']/g, s => (
           {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]
