@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- i18next for UI language switch -->
+  <!-- i18next -->
   <script defer src="https://unpkg.com/i18next@23.11.5/dist/umd/i18next.min.js"></script>
 
   <script defer src="app.js"></script>
@@ -49,7 +49,7 @@
         </select>
       </div>
 
-      <!-- Search box (optional) -->
+      <!-- Search -->
       <div class="search">
         <input id="searchBox" class="input" type="search" placeholder="施設名やイベント名で検索" data-i18n-placeholder="search.placeholder">
       </div>
@@ -69,7 +69,8 @@
   </main>
 
   <footer class="site-footer">
-    <small>© 2025 Sapporo Events — Data © OpenStreetMap contributors</small>
+    <div id="legend" class="legend" aria-label="凡例"></div>
+    <small>© 2025 Sapporo Events — Map © OpenStreetMap contributors</small>
   </footer>
 </body>
 </html>
