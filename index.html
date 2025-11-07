@@ -21,32 +21,110 @@
     }
     h1 { margin: 0; font-size: 16px; }
     #map { flex: 1; width: 100%; }
+
+    /* ちいさな凡例 */
+    .legend {
+      position: absolute; z-index: 1000; left: 10px; bottom: 10px;
+      background: rgba(255,255,255,.9); border: 1px solid #ddd; border-radius: 6px;
+      padding: 6px 8px; font-size: 12px; line-height: 1.4;
+    }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .popup-title{ font-weight:700; margin:0 0 4px; font-size:14px; }
+    .badge{ display:inline-block; padding:2px 6px; border-radius:999px; font-size:12px; background:#eef; }
+    .popup-desc{ margin-top:6px; font-size:13px; line-height:1.5; }
   </style>
 </head>
 <body>
   <header>
     <h1>札幌イベントMAP</h1>
-    <span style="font-size:12px;color:#666;">（OpenStreetMap 標準タイル・全画面）</span>
+    <span style="font-size:12px;color:#666;">（OSM標準／イベントピン表示）</span>
   </header>
 
   <div id="map"></div>
+
+  <!-- カテゴリ凡例（必要なければ削除OK） -->
+  <div class="legend" id="legend"></div>
 
   <script>
     if (!window.L) {
       document.getElementById('map').innerHTML = 'Leafletが読み込めていません。';
     } else {
+      // 札幌中心
       const map = L.map('map').setView([43.0618, 141.3545], 12);
 
-      // ✅ ここを元の OpenStreetMap 標準タイルに戻しました
+      // OSM標準タイル
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '© OpenStreetMap contributors'
       }).addTo(map);
 
-      // テストマーカー（大通公園）
-      L.marker([43.0610, 141.356])
-        .addTo(map)
-        .bindPopup('テスト：大通公園付近');
+      // カテゴリごとの色（増やしたい場合はここに追記）
+      const CATEGORY_COLORS = {
+        "グルメ": "#f25f5c",
+        "音楽": "#3a86ff",
+        "アート": "#8338ec",
+        "スポーツ": "#43aa8b",
+        "default": "#555"
+      };
+
+      // 凡例を描画
+      const legendEl = document.getElementById('legend');
+      const legendCats = ["グルメ","音楽","アート","スポーツ"];
+      legendEl.innerHTML =
+        '<div style="font-weight:600;margin-bottom:4px;">ジャンル</div>' +
+        legendCats.map(c => (
+          `<div class="legend-item"><span class="dot" style="background:${CATEGORY_COLORS[c]}"></span>${c}</div>`
+        )).join('');
+
+      // events.json を読み込んで丸マーカー表示
+      fetch('events.json')
+        .then(r => r.json())
+        .then(data => {
+          data.forEach(ev => {
+            if (!isFinite(ev.lat) || !isFinite(ev.lng)) return; // lat/lngが無い行はスキップ
+            const color = CATEGORY_COLORS[ev.category] || CATEGORY_COLORS.default;
+
+            const marker = L.circleMarker([ev.lat, ev.lng], {
+              radius: 8,
+              color: color,
+              fillColor: color,
+              fillOpacity: 0.9
+            }).addTo(map);
+
+            const start = ev.dateStart ? new Date(ev.dateStart) : null;
+            const end   = ev.dateEnd ? new Date(ev.dateEnd) : null;
+            const dateText = start
+              ? (end ? `${fmtDate(start)}〜${fmtDate(end)}` : `${fmtDateTime(start)}`)
+              : '日時未定';
+
+            const popupHtml = `
+              <div>
+                <div class="popup-title">${escapeHtml(ev.title || '')}</div>
+                <div class="badge">${escapeHtml(ev.category || 'イベント')}</div>
+                <div style="margin-top:6px;">🗓 ${dateText}</div>
+                <div>📍 ${escapeHtml(ev.venue || ev.address || '')}</div>
+                ${ev.url ? `<div style="margin-top:6px;"><a href="${ev.url}" target="_blank" rel="noopener">公式情報を開く</a></div>` : ''}
+                ${ev.description ? `<div class="popup-desc">📝 ${escapeHtml(ev.description)}</div>` : ''}
+              </div>
+            `;
+            marker.bindPopup(popupHtml);
+          });
+        })
+        .catch(err => {
+          console.error('events.json の読込エラー:', err);
+          alert('events.json を読み込めませんでした。ファイル配置を確認してください。');
+        });
+
+      // ユーティリティ
+      function escapeHtml(str) {
+        return String(str || '').replace(/[&<>"']/g, s => (
+          {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]
+        ));
+      }
+      function pad(n){ return n < 10 ? '0'+n : n; }
+      function fmtDate(d){ return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`; }
+      function fmtDateTime(d){ return `${fmtDate(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
     }
   </script>
 </body>
