@@ -2,356 +2,74 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>札幌イベントMAP</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
 
   <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- ルート表示（Leaflet Routing Machine + OSRM） -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css">
-  <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js"></script>
+  <!-- i18next for UI language switch -->
+  <script defer src="https://unpkg.com/i18next@23.11.5/dist/umd/i18next.min.js"></script>
 
-  <style>
-    * { box-sizing: border-box; }
-    html, body { height: 100%; margin: 0; }
-    body {
-      display: flex; flex-direction: column;
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
-      background: #fff;
-    }
-    header {
-      min-height: 56px; padding: 8px 12px;
-      border-bottom: 1px solid #eee;
-      display: grid; gap: 8px;
-      grid-template-columns: 1fr auto auto auto;
-      align-items: center;
-    }
-    h1 { margin: 0; font-size: 16px; line-height: 1.2; }
-    #controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    select, input[type="search"], button {
-      padding: 8px 10px; font-size: 13px; border-radius: 8px; border: 1px solid #ddd; background: #fff;
-    }
-    button.primary { background: #2fbf71; color: #fff; border-color: #2fbf71; }
-    button.ghost { background: #fff; color: #333; border-color: #ccc; }
-    button:active { transform: translateY(1px); }
-    #map { flex: 1; width: 100%; }
-
-    /* 右下の凡例（親指で隠れにくい） */
-    .legend {
-      position: absolute; z-index: 1000; right: 10px; bottom: 10px;
-      background: rgba(255,255,255,.95);
-      border: 1px solid #ddd; border-radius: 10px; padding: 8px 10px; font-size: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,.06);
-    }
-    .legend-item { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
-    .dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; border: 1px solid rgba(0,0,0,.2); }
-
-    /* ポップアップの見た目 */
-    .popup-title{ font-weight:700; margin:0 0 4px; font-size:14px; }
-    .badge{ display:inline-block; padding:2px 6px; border-radius:999px; font-size:12px; background:#eef; }
-    .popup-desc{ margin-top:6px; font-size:13px; line-height:1.5; color:#333; }
-    .popup-actions{ display:flex; gap:8px; margin-top:8px; flex-wrap: wrap; }
-    .btn { padding:6px 10px; font-size:13px; border-radius:8px; border:1px solid #ddd; background:#fff; }
-    .btn.run { background:#3a86ff; color:#fff; border-color:#3a86ff; }
-    .btn.link { background:#fff; color:#333; border-color:#bbb; }
-
-    /* 広告枠（ダミー） */
-    .adbar {
-      width: 100%; min-height: 60px; border-top: 1px solid #eee;
-      display:flex; align-items:center; justify-content:center; color:#777; font-size:12px;
-      background: #fafafa;
-    }
-
-    /* スマホ：ヘッダーを2段に折りたたむ */
-    @media (max-width: 720px) {
-      header { grid-template-columns: 1fr; }
-      #controls { justify-content: flex-start; }
-    }
-  </style>
+  <script defer src="app.js"></script>
 </head>
 <body>
-  <header>
-    <h1>札幌イベントMAP</h1>
+  <header class="site-header">
+    <h1 data-i18n="title">札幌イベントMAP</h1>
+    <div class="controls-row">
+      <!-- Category Tabs -->
+      <nav id="categoryTabs" class="tabs" role="tablist" aria-label="Categories">
+        <button class="tab is-active" data-cat="all" data-i18n="cat.all">すべて</button>
+        <button class="tab" data-cat="観光" data-i18n="cat.sightseeing">観光</button>
+        <button class="tab" data-cat="グルメ" data-i18n="cat.food">グルメ</button>
+        <button class="tab" data-cat="体験" data-i18n="cat.activity">体験</button>
+        <button class="tab" data-cat="学び" data-i18n="cat.learn">学び</button>
+        <button class="tab" data-cat="その他" data-i18n="cat.other">その他</button>
+      </nav>
 
-    <div id="controls">
-      <select id="when">
-        <option value="all">すべての期間</option>
-        <option value="today">今日</option>
-        <option value="week">今週</option>
-        <option value="month">今月</option>
-      </select>
+      <!-- Date quick filters -->
+      <div class="date-filters">
+        <button class="btn ghost" data-date="today" data-i18n="date.today">今日</button>
+        <button class="btn ghost" data-date="weekend" data-i18n="date.weekend">今週末</button>
+        <button class="btn ghost" data-date="nextweek" data-i18n="date.nextweek">来週</button>
+        <button class="btn ghost" data-date="clear" data-i18n="date.clear">日付解除</button>
+      </div>
 
-      <select id="cat">
-        <option value="all">ジャンル（すべて）</option>
-        <option value="グルメ">グルメ</option>
-        <option value="音楽">音楽</option>
-        <option value="アート">アート</option>
-        <option value="スポーツ">スポーツ</option>
-        <option value="学び">学び</option>
-        <option value="その他">その他</option>
-      </select>
+      <!-- Language switch -->
+      <div class="lang-switch">
+        <label for="langSelect" class="sr-only">Language</label>
+        <select id="langSelect" class="select">
+          <option value="ja">日本語</option>
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="ko">한국어</option>
+          <option value="zh">中文</option>
+        </select>
+      </div>
 
-      <input id="kw" type="search" placeholder="キーワード（会場・タイトル・解説）" />
-
-      <button id="locateBtn" class="primary">現在地を取得</button>
-      <button id="clearRouteBtn" class="ghost">ルートを消す</button>
+      <!-- Search box (optional) -->
+      <div class="search">
+        <input id="searchBox" class="input" type="search" placeholder="施設名やイベント名で検索" data-i18n-placeholder="search.placeholder">
+      </div>
     </div>
-
-    <!-- 共有用（ハッシュにevt-idが入る） -->
-    <button id="shareBtn" class="ghost">このイベントを共有</button>
   </header>
 
-  <!-- 上部広告（審査後にコードを差し替え） -->
-  <div class="adbar" id="ad-top">広告枠（AdSenseコードをここに挿入）</div>
+  <!-- Split layout: Map + List -->
+  <main class="layout">
+    <section id="map" aria-label="Map"></section>
+    <aside id="listPane" aria-label="List">
+      <div id="listHeader" class="list-header">
+        <span id="hitCount"></span>
+        <button id="toggleView" class="btn small" data-mode="both" data-i18n="view.toggle">地図＋一覧</button>
+      </div>
+      <ul id="eventList" class="event-list" aria-live="polite"></ul>
+    </aside>
+  </main>
 
-  <div id="map"></div>
-
-  <div class="legend" id="legend"></div>
-
-  <!-- 下部広告 -->
-  <div class="adbar" id="ad-bottom">広告枠（記事ページや特集と併用が効果的）</div>
-
-  <script>
-    // ========== 地図初期化 ==========
-    if (!window.L) {
-      document.getElementById('map').innerHTML = 'Leafletが読み込めていません。拡張機能やネットワークをご確認ください。';
-    } else {
-      const map = L.map('map').setView([43.0618, 141.3545], 12);
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap contributors'
-      }).addTo(map);
-
-      // ========== 配色（色覚バリアフリー寄り） ==========
-      const CATEGORY_COLORS = {
-        // オレンジ / ブルー / パープル / グリーン / イエロー / グレー
-        "グルメ":   "#E4572E",
-        "音楽":    "#3A86FF",
-        "アート":  "#8E5DFF",
-        "スポーツ": "#2FBF71",
-        "学び":    "#F2C14E",
-        "その他":   "#7A7A7A",
-        "default": "#555"
-      };
-
-      // ========== UI参照 ==========
-      const $when = document.getElementById('when');
-      const $cat  = document.getElementById('cat');
-      const $kw   = document.getElementById('kw');
-      const $loc  = document.getElementById('locateBtn');
-      const $clr  = document.getElementById('clearRouteBtn');
-      const $share= document.getElementById('shareBtn');
-
-      // ========== 現在地 ==========
-      let userLatLng = null;
-      let userMarker = null;
-      function getUserLocation() {
-        if (!navigator.geolocation) { alert('この端末は位置情報に対応していません。'); return; }
-        navigator.geolocation.getCurrentPosition(
-          pos => {
-            userLatLng = [pos.coords.latitude, pos.coords.longitude];
-            if (userMarker) map.removeLayer(userMarker);
-            userMarker = L.marker(userLatLng, { title: '現在地' }).bindPopup('📍 現在地').addTo(map);
-          },
-          err => { alert('現在地を取得できませんでした。ブラウザの位置情報許可をご確認ください。'); console.warn(err); },
-          { enableHighAccuracy: true, timeout: 10000 }
-        );
-      }
-      $loc.onclick = getUserLocation;
-
-      // ========== ルート（OSRMデモ。混雑時は失敗あり） ==========
-      let routingControl = null;
-      function clearRoute() { if (routingControl) { map.removeControl(routingControl); routingControl = null; } }
-      function routeTo(lat, lng) {
-        if (!userLatLng) { alert('先に［現在地を取得］してください。'); return; }
-        clearRoute();
-        routingControl = L.Routing.control({
-          waypoints: [ L.latLng(userLatLng[0], userLatLng[1]), L.latLng(lat, lng) ],
-          lineOptions: { addWaypoints: false },
-          show: false, collapsible: true,
-          router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1' }),
-          createMarker: () => null
-        }).addTo(map);
-      }
-      $clr.onclick = clearRoute;
-
-      // ========== イベント読み込み（終了済みを非表示 / 未来順にソート） ==========
-      let allEvents = [];
-      let markers = [];
-      const markerById = new Map();
-      let openedEventId = null;
-
-      fetch('events.json', { cache:'no-store' })
-        .then(r => r.json())
-        .then(data => {
-          const today = new Date();
-          // 終了日があれば終了日、なければ開始日でフィルタ
-          allEvents = data.filter(ev => {
-            const end = ev.dateEnd ? new Date(ev.dateEnd) : (ev.dateStart ? new Date(ev.dateStart) : null);
-            return end && end >= startOfDay(today);
-          });
-          allEvents.sort((a,b) => new Date(a.dateStart) - new Date(b.dateStart));
-          render();
-          // ディープリンク対応（#evt-...）
-          window.addEventListener('hashchange', openByHash);
-          openByHash();
-        })
-        .catch(err => {
-          console.error('events.json の読込エラー:', err);
-          document.getElementById('map').insertAdjacentHTML('beforebegin',
-            '<div style="padding:10px;color:#b00020;">イベント情報の読み込みに失敗しました。ページを再読み込みしてください。</div>');
-        });
-
-      // ========== 描画 ==========
-      function render() {
-        // フィルタリング
-        const now = new Date();
-        const range = $when.value;
-        const kw = ($kw.value || '').trim().toLowerCase();
-        const cat = $cat.value;
-
-        const sod = startOfDay(now), eod = endOfDay(now);
-        const endOfW = addDays(sod, 7);
-        const endOfM = endOfMonth(now);
-
-        const filtered = allEvents.filter(ev => {
-          const s = ev.dateStart ? new Date(ev.dateStart) : null;
-          const e = ev.dateEnd ? new Date(ev.dateEnd) : s;
-          if (!s) return false;
-
-          // 期間
-          let inRange = true;
-          if (range === 'today') inRange = (e >= sod && s < eod);
-          if (range === 'week')  inRange = (e >= sod && s < endOfW);
-          if (range === 'month') inRange = (e >= sod && s <= endOfM);
-          if (!inRange) return false;
-
-          // カテゴリ
-          if (cat !== 'all' && (ev.category || '') !== cat) return false;
-
-          // キーワード
-          if (kw) {
-            const hay = `${ev.title||''} ${ev.venue||''} ${ev.address||''} ${ev.description||''}`.toLowerCase();
-            if (!hay.includes(kw)) return false;
-          }
-          return true;
-        });
-
-        // 既存マーカー削除
-        markers.forEach(m => map.removeLayer(m));
-        markers = []; markerById.clear();
-
-        // マーカー追加
-        filtered.forEach(ev => {
-          if (!isFinite(ev.lat) || !isFinite(ev.lng)) return;
-          const color = CATEGORY_COLORS[ev.category] || CATEGORY_COLORS.default;
-          const marker = L.circleMarker([ev.lat, ev.lng], {
-            radius: 9, color: color, fillColor: color, fillOpacity: 0.95
-          }).addTo(map);
-
-          const s = ev.dateStart ? new Date(ev.dateStart) : null;
-          const e = ev.dateEnd ? new Date(ev.dateEnd) : null;
-          const dateText = s ? (e ? `${fmtDate(s)}〜${fmtDate(e)}` : `${fmtDateTime(s)}`) : '日時未定';
-
-          const gmapsLink = `https://www.google.com/maps/dir/?api=1&destination=${ev.lat},${ev.lng}`;
-          const popupHtml = `
-            <div>
-              <div class="popup-title">${escapeHtml(ev.title || '')}</div>
-              <div class="badge">${escapeHtml(ev.category || 'イベント')}</div>
-              <div style="margin-top:6px;">🗓 ${dateText}</div>
-              <div>📍 ${escapeHtml(ev.venue || ev.address || '')}</div>
-              ${ev.url ? `<div style="margin-top:6px;"><a class="btn link" href="${ev.url}" target="_blank" rel="noopener">公式情報を開く</a></div>` : ''}
-              ${ev.description ? `<div class="popup-desc">📝 ${escapeHtml(ev.description)}</div>` : ''}
-              <div class="popup-actions">
-                <button class="btn run"   id="go-${ev.id}">ここへ行く（現在地→ルート）</button>
-                <a class="btn link" href="${gmapsLink}" target="_blank" rel="noopener">Googleマップで開く</a>
-                <button class="btn link" id="share-${ev.id}">共有</button>
-              </div>
-            </div>
-          `;
-          marker.bindPopup(popupHtml);
-          marker.on('popupopen', () => {
-            const btnGo = document.getElementById(`go-${ev.id}`);
-            if (btnGo) btnGo.onclick = () => routeTo(ev.lat, ev.lng);
-            const btnShare = document.getElementById(`share-${ev.id}`);
-            if (btnShare) btnShare.onclick = () => shareEvent(ev.id);
-            // URLハッシュを反映＆一時ハイライト
-            openedEventId = ev.id;
-            history.replaceState(null, '', `#${ev.id}`);
-            pulse(marker);
-          });
-
-          markerById.set(ev.id, marker);
-          markers.push(marker);
-        });
-
-        // 凡例（使用中カテゴリのみ自動生成）
-        const legendCats = [...new Set(filtered.map(ev => ev.category || 'その他'))];
-        const legendEl = document.getElementById('legend');
-        legendEl.innerHTML =
-          '<div style="font-weight:600;margin-bottom:4px;">ジャンル</div>' +
-          legendCats.map(c => (
-            `<div class="legend-item"><span class="dot" style="background:${CATEGORY_COLORS[c] || CATEGORY_COLORS.default}"></span>${escapeHtml(c)}</div>`
-          )).join('');
-      }
-
-      // 入力イベントで再描画
-      [$when, $cat, $kw].forEach(el => el.addEventListener('input', render));
-
-      // ========== ディープリンク（#evt-...） ==========
-      function openByHash() {
-        const id = decodeURIComponent(location.hash.replace('#',''));
-        if (id && markerById.has(id)) {
-          const m = markerById.get(id);
-          m.openPopup();
-          map.setView(m.getLatLng(), 14, { animate: true });
-          pulse(m);
-        }
-      }
-
-      // 現在開いているものを共有
-      $share.onclick = () => {
-        const id = openedEventId || location.hash.replace('#','');
-        if (!id) { alert('共有するイベントを先に開いてください。'); return; }
-        shareEvent(id);
-      };
-
-      async function shareEvent(id) {
-        const url = `${location.origin}${location.pathname}#${encodeURIComponent(id)}`;
-        try {
-          if (navigator.share) {
-            await navigator.share({ title: '札幌イベントMAP', url });
-          } else {
-            await navigator.clipboard.writeText(url);
-            alert('リンクをコピーしました：\n' + url);
-          }
-        } catch (e) {
-          console.warn(e);
-          prompt('このURLをコピーしてください：', url);
-        }
-      }
-
-      // ========== 小ユーティリティ ==========
-      function pulse(marker) {
-        const orig = marker.options.radius;
-        marker.setStyle({ radius: orig + 4 });
-        setTimeout(() => marker.setStyle({ radius: orig }), 1600);
-      }
-      function startOfDay(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
-      function endOfDay(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()+1); }
-      function addDays(d,n){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()+n); }
-      function endOfMonth(d){ return new Date(d.getFullYear(), d.getMonth()+1, 0, 23,59,59); }
-      function escapeHtml(str) {
-        return String(str || '').replace(/[&<>"']/g, s => (
-          {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]
-        ));
-      }
-      function pad(n){ return n<10 ? '0'+n : n; }
-      function fmtDate(d){ return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`; }
-      function fmtDateTime(d){ return `${fmtDate(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
-    }
-  </script>
+  <footer class="site-footer">
+    <small>© 2025 Sapporo Events — Data © OpenStreetMap contributors</small>
+  </footer>
 </body>
 </html>
