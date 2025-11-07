@@ -26,7 +26,7 @@
 <body>
   <header>
     <h1>札幌イベントMAP</h1>
-    <span style="font-size:12px;color:#666;">（OpenStreetMap標準版・全画面）</span>
+    <span style="font-size:12px;color:#666;">（OpenStreetMap 標準タイル・全画面）</span>
   </header>
 
   <div id="map"></div>
@@ -37,14 +37,16 @@
     } else {
       const map = L.map('map').setView([43.0618, 141.3545], 12);
 
-      // ✅ OpenStreetMap標準タイル（最初に地図が出た時の形式）
+      // ✅ ここを元の OpenStreetMap 標準タイルに戻しました
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '© OpenStreetMap contributors'
       }).addTo(map);
 
-      // テストマーカー
-      L.marker([43.0610, 141.356]).addTo(map).bindPopup('テスト：大通公園付近');
+      // テストマーカー（大通公園）
+      L.marker([43.0610, 141.356])
+        .addTo(map)
+        .bindPopup('テスト：大通公園付近');
     }
   </script>
 </body>
